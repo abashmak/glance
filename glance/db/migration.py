@@ -22,6 +22,7 @@
 import os
 import threading
 
+
 from oslo_config import cfg
 from oslo_db import options as db_options
 from stevedore import driver
@@ -31,6 +32,14 @@ from glance.db.sqlalchemy import api as db_api
 
 _IMPL = None
 _LOCK = threading.Lock()
+EXPAND_BRANCH = 'expand'
+CONTRACT_BRANCH = 'contract'
+MIGRATION_BRANCHES = (EXPAND_BRANCH, CONTRACT_BRANCH)
+MITAKA = 'mitaka'
+NEWTON = 'newton'
+OCATA = 'ocata'
+RELEASES = (MITAKA, NEWTON, OCATA)
+
 
 db_options.set_defaults(cfg.CONF)
 
@@ -46,6 +55,7 @@ def get_backend():
     return _IMPL
 
 INIT_VERSION = 0
+ALEMBIC_INIT_VERSION = 'liberty'
 
 MIGRATE_REPO_PATH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)),

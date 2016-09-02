@@ -39,6 +39,10 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'glance', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
+from alembic import command as alembic_command
+from alembic import config as alembic_config
+from alembic import migration as alembic_migration
+
 from oslo_config import cfg
 from oslo_db.sqlalchemy import migration
 from oslo_log import log as logging
@@ -73,39 +77,66 @@ class DbCommands(object):
 
     def version(self):
         """Print database's current migration level"""
-        print(migration.db_version(db_api.get_engine(),
-                                   db_migration.MIGRATE_REPO_PATH,
-                                   db_migration.INIT_VERSION))
+        current_heads = _get_current_alembic_heads()
+        if current_heads:
+            # Migrations are managed by alembic
+            for head in current_heads:
+                print(head)
+        else:
+            # Migrations are managed by legacy versioning scheme
+            print(_get_current_legacy_head())
 
     @args('--version', metavar='<version>', help='Database version')
-    def upgrade(self, version=None):
+    def upgrade(self, version='heads'):
         """Upgrade the database's migration level"""
-        migration.db_sync(db_api.get_engine(),
-                          db_migration.MIGRATE_REPO_PATH,
-                          version)
+        a_config = _get_alembic_config()
+
+        if not _get_current_alembic_heads():
+            head = _get_current_legacy_head()
+            if head == 42:
+                alembic_command.stamp(a_config, 'liberty')
+            elif head == 43:
+                alembic_command.stamp(a_config, 'mitaka01')
+            elif head == 44:
+                alembic_command.stamp(a_config, 'mitaka02')
+            elif head != 0:
+                sys.exit(("Unknown database state, "
+                          "please delete and run db_sync"))
+
+        alembic_command.upgrade(a_config, version)
+        print("Upgraded to revision:", version)
 
     @args('--version', metavar='<version>', help='Database version')
-    def version_control(self, version=None):
+    def version_control(self, version=db_migration.ALEMBIC_INIT_VERSION):
         """Place a database under migration control"""
-        migration.db_version_control(db_api.get_engine(),
-                                     db_migration.MIGRATE_REPO_PATH,
-                                     version)
+        a_config = _get_alembic_config()
+        alembic_command.stamp(a_config, version)
+        print("Stamped revision:", version)
 
     @args('--version', metavar='<version>', help='Database version')
-    @args('--current_version', metavar='<version>',
-          help='Current Database version')
-    def sync(self, version=None, current_version=None):
+    def sync(self, version='heads'):
         """
-        Place a database under migration control and upgrade it,
-        creating first if necessary.
+        Place an existing database under migration control and upgrade it.
         """
-        if current_version not in (None, 'None'):
-            migration.db_version_control(db_api.get_engine(),
-                                         db_migration.MIGRATE_REPO_PATH,
-                                         version=current_version)
-        migration.db_sync(db_api.get_engine(),
-                          db_migration.MIGRATE_REPO_PATH,
-                          version)
+        # TODO(abashmak): check if glance database exists and create if not.
+        # Note: this functionality never existed in previous versions, so
+        # this would be a robustness enhancements
+        self.upgrade(version)
+
+    def expand(self):
+        """Run the expansion phase of a rolling upgrade procedure."""
+        self.upgrade(db_migration.EXPAND_BRANCH)
+
+    def data_migrate(self):
+        """Run the data migration phase of a rolling upgrade procedure."""
+        raise NotImplementedError(("Data migration is currently done as"
+                                   " part of the contract phase"))
+
+    def contract(self):
+        """Run the contraction phase of a rolling upgrade procedure."""
+        # TODO(abashmak): determine if need to check here for expansion
+        # (and later data migration) being completed, to prevent operator error
+        self.upgrade(db_migration.CONTRACT_BRANCH)
 
     @args('--path', metavar='<path>', help='Path to the directory or file '
                                            'where json metadata is stored')
@@ -185,9 +216,17 @@ class DbLegacyCommands(object):
     def version_control(self, version=None):
         self.command_object.version_control(CONF.command.version)
 
-    def sync(self, version=None, current_version=None):
-        self.command_object.sync(CONF.command.version,
-                                 CONF.command.current_version)
+    def sync(self, version=None):
+        self.command_object.sync(CONF.command.version)
+
+    def expand(self):
+        self.command_object.expand()
+
+    def data_migrate(self):
+        self.command_object.data_migrate()
+
+    def contract(self):
+        self.command_object.contract()
 
     def load_metadefs(self, path=None, merge=False,
                       prefer_new=False, overwrite=False):
@@ -224,8 +263,19 @@ def add_legacy_command_parsers(command_object, subparsers):
     parser = subparsers.add_parser('db_sync')
     parser.set_defaults(action_fn=legacy_command_object.sync)
     parser.add_argument('version', nargs='?')
-    parser.add_argument('current_version', nargs='?')
     parser.set_defaults(action='db_sync')
+
+    parser = subparsers.add_parser('db_expand')
+    parser.set_defaults(action_fn=legacy_command_object.expand)
+    parser.set_defaults(action='db_expand')
+
+    parser = subparsers.add_parser('db_data_migrate')
+    parser.set_defaults(action_fn=legacy_command_object.data_migrate)
+    parser.set_defaults(action='db_data_migrate')
+
+    parser = subparsers.add_parser('db_contract')
+    parser.set_defaults(action_fn=legacy_command_object.contract)
+    parser.set_defaults(action='db_contract')
 
     parser = subparsers.add_parser('db_load_metadefs')
     parser.set_defaults(action_fn=legacy_command_object.load_metadefs)
@@ -253,7 +303,7 @@ def add_command_parsers(subparsers):
 
     category_subparsers = parser.add_subparsers(dest='action')
 
-    for (action, action_fn) in methods_of(command_object):
+    for (action, action_fn) in _methods_of(command_object):
         parser = category_subparsers.add_parser(action)
 
         action_kwargs = []
@@ -289,7 +339,32 @@ CATEGORIES = {
 }
 
 
-def methods_of(obj):
+def _get_alembic_config():
+    """Return a valid alembic config object"""
+    # TODO(abashmak) there has to be a better way to do this
+    ini_path = os.path.join(os.path.dirname(__file__),
+                            '../db/sqlalchemy/alembic.ini')
+    config = alembic_config.Config(os.path.abspath(ini_path))
+    dbconn = str(db_api.get_engine().url)
+    config.set_main_option('sqlalchemy.url', dbconn)
+    return config
+
+
+def _get_current_alembic_heads():
+    """Return current heads (if any) from the alembic migration table"""
+    engine = db_api.get_engine()
+    conn = engine.connect()
+    context = alembic_migration.MigrationContext.configure(conn)
+    return context.get_current_heads()
+
+
+def _get_current_legacy_head():
+    return migration.db_version(db_api.get_engine(),
+                                db_migration.MIGRATE_REPO_PATH,
+                                db_migration.INIT_VERSION)
+
+
+def _methods_of(obj):
     """Get all callable methods of an object that don't start with underscore
 
     returns a list of tuples of the form (method_name, method)
