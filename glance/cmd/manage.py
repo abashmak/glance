@@ -342,8 +342,8 @@ CATEGORIES = {
 def _get_alembic_config():
     """Return a valid alembic config object"""
     # TODO(abashmak) there has to be a better way to do this
-    ini_path = os.path.join(os.path.dirname(__file__),
-                            '../db/sqlalchemy/alembic.ini')
+    ini = '../db/sqlalchemy/alembic_migrations/alembic.ini'
+    ini_path = os.path.join(os.path.dirname(__file__), ini)
     config = alembic_config.Config(os.path.abspath(ini_path))
     dbconn = str(db_api.get_engine().url)
     config.set_main_option('sqlalchemy.url', dbconn)

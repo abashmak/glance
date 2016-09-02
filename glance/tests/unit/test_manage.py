@@ -15,7 +15,6 @@
 
 import fixtures
 import mock
-from six.moves import StringIO
 
 from glance.cmd import manage
 from glance.db.sqlalchemy import api as db_api
