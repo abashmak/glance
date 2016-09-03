@@ -1627,7 +1627,7 @@ msgstr "No se soporta el tipo de tarea proporcionado: %(type)s"
 msgid "Provides a user friendly description of the namespace."
 msgstr "Proporciona una descripción sencilla del espacio de nombre."
 
-msgid "Public images do not have members."
+msgid "Only shared images have members."
 msgstr "Las imágenes públicas no tienen miembros."
 
 msgid "Received invalid HTTP redirect."

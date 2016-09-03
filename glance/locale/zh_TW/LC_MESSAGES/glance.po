@@ -1502,7 +1502,7 @@ msgstr "提供的作業類型 %(type)s 不受支援"
 msgid "Provides a user friendly description of the namespace."
 msgstr "提供對使用者更為友善的名稱空間說明。"
 
-msgid "Public images do not have members."
+msgid "Only shared images have members."
 msgstr "公用映像檔沒有成員。"
 
 msgid "Received invalid HTTP redirect."

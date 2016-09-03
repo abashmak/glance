@@ -78,6 +78,11 @@ The actions that may have a rule enforced on them are:
   * ``POST /v2/images`` with attribute ``visibility`` = ``public``
   * ``PUT /v2/images/<IMAGE_ID>`` with attribute ``visibility`` = ``public``
 
+* ``communitize_image`` - Create or update images with attribute
+
+  * ``POST /v2/images`` with attribute ``visibility`` = ``community``
+  * ``PUT /v2/images/<IMAGE_ID>`` with attribute ``visibility`` = ``community``
+
 * ``delete_image`` - Delete an image entity and associated binary data
 
   * ``DELETE /v1/images/<IMAGE_ID>``

@@ -186,7 +186,7 @@ class TestImages(functional.FunctionalTest):
             'status': 'queued',
             'name': 'image-1',
             'tags': [],
-            'visibility': 'private',
+            'visibility': 'shared',
             'self': '/v2/images/%s' % image_id,
             'protected': False,
             'file': '/v2/images/%s/file' % image_id,
@@ -250,7 +250,7 @@ class TestImages(functional.FunctionalTest):
             'status': 'queued',
             'name': 'image-2',
             'tags': [],
-            'visibility': 'private',
+            'visibility': 'shared',
             'self': '/v2/images/%s' % image2_id,
             'protected': False,
             'file': '/v2/images/%s/file' % image2_id,
@@ -803,7 +803,7 @@ class TestImages(functional.FunctionalTest):
             'status': 'queued',
             'name': 'image-1',
             'tags': [],
-            'visibility': 'private',
+            'visibility': 'shared',
             'self': '/v2/images/%s' % image_id,
             'protected': False,
             'file': '/v2/images/%s/file' % image_id,
@@ -872,7 +872,7 @@ class TestImages(functional.FunctionalTest):
             'status': 'queued',
             'name': 'image-1',
             'tags': [],
-            'visibility': 'private',
+            'visibility': 'shared',
             'self': '/v2/images/%s' % image_id,
             'protected': False,
             'file': '/v2/images/%s/file' % image_id,
@@ -944,7 +944,7 @@ class TestImages(functional.FunctionalTest):
             'status': 'queued',
             'name': 'image-1',
             'tags': [],
-            'visibility': 'private',
+            'visibility': 'shared',
             'self': '/v2/images/%s' % image_id,
             'protected': False,
             'file': '/v2/images/%s/file' % image_id,
@@ -1289,6 +1289,48 @@ class TestImages(functional.FunctionalTest):
         response = requests.patch(path, headers=headers, data=data)
         self.assertEqual(200, response.status_code)
 
+    def test_owning_tenant_can_communitize_image(self):
+        rules = {
+            "context_is_admin": "role:admin",
+            "default": "",
+            "add_image": "",
+            "communitize_image": "tenant:%(owner)s",
+            "get_image": "tenant:%(owner)s",
+            "modify_image": "",
+            "upload_image": "",
+            "get_image_location": "",
+            "delete_image": "",
+            "restricted":
+            "not ('aki':%(container_format)s and role:_member_)",
+            "download_image": "role:admin or rule:restricted",
+            "add_member": "",
+        }
+
+        self.set_policy_rules(rules)
+        self.start_servers(**self.__dict__.copy())
+
+        path = self._url('/v2/images')
+        headers = self._headers({'content-type': 'application/json',
+                                 'X-Roles': 'admin', 'X-Tenant-Id': TENANT1})
+        data = jsonutils.dumps({'name': 'image-1', 'disk_format': 'aki',
+                                'container_format': 'aki'})
+        response = requests.post(path, headers=headers, data=data)
+        self.assertEqual(201, response.status_code)
+
+        # Get the image's ID
+        image = jsonutils.loads(response.text)
+        image_id = image['id']
+
+        path = self._url('/v2/images/%s' % image_id)
+        headers = self._headers({
+            'Content-Type': 'application/openstack-images-v2.1-json-patch',
+            'X-Tenant-Id': TENANT1,
+        })
+        doc = [{'op': 'replace', 'path': '/visibility', 'value': 'community'}]
+        data = jsonutils.dumps(doc)
+        response = requests.patch(path, headers=headers, data=data)
+        self.assertEqual(200, response.status_code)
+
     def test_owning_tenant_can_delete_image(self):
         rules = {
             "context_is_admin": "role:admin",
@@ -1564,7 +1606,7 @@ class TestImages(functional.FunctionalTest):
             'status': 'queued',
             'name': 'image-1',
             'tags': [],
-            'visibility': 'private',
+            'visibility': 'shared',
             'self': '/v2/images/%s' % image_id,
             'protected': False,
             'file': '/v2/images/%s/file' % image_id,
@@ -1713,7 +1755,7 @@ class TestImages(functional.FunctionalTest):
             'status': 'queued',
             'name': 'image-1',
             'tags': [],
-            'visibility': 'private',
+            'visibility': 'shared',
             'self': '/v2/images/%s' % image_id,
             'protected': False,
             'file': '/v2/images/%s/file' % image_id,
@@ -1851,7 +1893,7 @@ class TestImages(functional.FunctionalTest):
             'status': 'queued',
             'name': 'image-1',
             'tags': [],
-            'visibility': 'private',
+            'visibility': 'shared',
             'self': '/v2/images/%s' % image_id,
             'protected': False,
             'file': '/v2/images/%s/file' % image_id,
@@ -1879,7 +1921,7 @@ class TestImages(functional.FunctionalTest):
             'status': 'queued',
             'name': 'image-1',
             'tags': [],
-            'visibility': 'private',
+            'visibility': 'shared',
             'self': '/v2/images/%s' % image_id,
             'protected': False,
             'file': '/v2/images/%s/file' % image_id,
@@ -2128,7 +2170,7 @@ class TestImages(functional.FunctionalTest):
             'status': 'queued',
             'name': 'image-1',
             'tags': [],
-            'visibility': 'private',
+            'visibility': 'shared',
             'self': '/v2/images/%s' % image_id,
             'protected': False,
             'file': '/v2/images/%s/file' % image_id,
@@ -2156,7 +2198,7 @@ class TestImages(functional.FunctionalTest):
             'status': 'queued',
             'name': 'image-1',
             'tags': [],
-            'visibility': 'private',
+            'visibility': 'shared',
             'self': '/v2/images/%s' % image_id,
             'protected': False,
             'file': '/v2/images/%s/file' % image_id,
@@ -2730,7 +2772,7 @@ class TestImages(functional.FunctionalTest):
         self.start_servers(**kwargs)
 
         owners = ['admin', 'tenant1', 'tenant2', 'none']
-        visibilities = ['public', 'private']
+        visibilities = ['public', 'private', 'shared', 'community']
 
         for owner in owners:
             for visibility in visibilities:
@@ -2758,7 +2800,7 @@ class TestImages(functional.FunctionalTest):
 
         # 1. Known user sees public and their own images
         images = list_images('tenant1')
-        self.assertEqual(5, len(images))
+        self.assertEqual(7, len(images))
         for image in images:
             self.assertTrue(image['visibility'] == 'public'
                             or 'tenant1' in image['name'])
@@ -2776,53 +2818,101 @@ class TestImages(functional.FunctionalTest):
         self.assertEqual('private', image['visibility'])
         self.assertIn('tenant1', image['name'])
 
-        # 4. Unknown user sees only public images
+        # 4. Known user, visibility=shared, sees only their shared image
+        images = list_images('tenant1', visibility='shared')
+        self.assertEqual(1, len(images))
+        image = images[0]
+        self.assertEqual('shared', image['visibility'])
+        self.assertIn('tenant1', image['name'])
+
+        # 5. Known user, visibility=community, sees all community images
+        images = list_images('tenant1', visibility='community')
+        self.assertEqual(4, len(images))
+        for image in images:
+            self.assertEqual('community', image['visibility'])
+
+        # 6. Unknown user sees only public images
         images = list_images('none')
         self.assertEqual(4, len(images))
         for image in images:
             self.assertEqual('public', image['visibility'])
 
-        # 5. Unknown user, visibility=public, sees only public images
+        # 7. Unknown user, visibility=public, sees only public images
         images = list_images('none', visibility='public')
         self.assertEqual(4, len(images))
         for image in images:
             self.assertEqual('public', image['visibility'])
 
-        # 6. Unknown user, visibility=private, sees no images
+        # 8. Unknown user, visibility=private, sees no images
         images = list_images('none', visibility='private')
         self.assertEqual(0, len(images))
 
-        # 7. Unknown admin sees all images
-        images = list_images('none', role='admin')
-        self.assertEqual(8, len(images))
+        # 9. Unknown user, visibility=shared, sees no images
+        images = list_images('none', visibility='shared')
+        self.assertEqual(0, len(images))
 
-        # 8. Unknown admin, visibility=public, shows only public images
+        # 10. Unknown user, visibility=community, sees only community images
+        images = list_images('none', visibility='community')
+        self.assertEqual(4, len(images))
+        for image in images:
+            self.assertEqual('community', image['visibility'])
+
+        # 11. Unknown admin sees all images except for community images
+        images = list_images('none', role='admin')
+        self.assertEqual(12, len(images))
+
+        # 12. Unknown admin, visibility=public, shows only public images
         images = list_images('none', role='admin', visibility='public')
         self.assertEqual(4, len(images))
         for image in images:
             self.assertEqual('public', image['visibility'])
 
-        # 9. Unknown admin, visibility=private, sees only private images
+        # 13. Unknown admin, visibility=private, sees only private images
         images = list_images('none', role='admin', visibility='private')
         self.assertEqual(4, len(images))
         for image in images:
             self.assertEqual('private', image['visibility'])
 
-        # 10. Known admin sees all images
-        images = list_images('admin', role='admin')
-        self.assertEqual(8, len(images))
+        # 14. Unknown admin, visibility=shared, sees only shared images
+        images = list_images('none', role='admin', visibility='shared')
+        self.assertEqual(4, len(images))
+        for image in images:
+            self.assertEqual('shared', image['visibility'])
 
-        # 11. Known admin, visibility=public, sees all public images
+        # 15. Unknown admin, visibility=community, sees only community images
+        images = list_images('none', role='admin', visibility='community')
+        self.assertEqual(4, len(images))
+        for image in images:
+            self.assertEqual('community', image['visibility'])
+
+        # 16. Known admin sees all images, except community images owned by
+        # others
+        images = list_images('admin', role='admin')
+        self.assertEqual(13, len(images))
+
+        # 17. Known admin, visibility=public, sees all public images
         images = list_images('admin', role='admin', visibility='public')
         self.assertEqual(4, len(images))
         for image in images:
             self.assertEqual('public', image['visibility'])
 
-        # 12. Known admin, visibility=private, sees all private images
+        # 18. Known admin, visibility=private, sees all private images
         images = list_images('admin', role='admin', visibility='private')
         self.assertEqual(4, len(images))
         for image in images:
             self.assertEqual('private', image['visibility'])
+
+        # 19. Known admin, visibility=shared, sees all shared images
+        images = list_images('admin', role='admin', visibility='shared')
+        self.assertEqual(4, len(images))
+        for image in images:
+            self.assertEqual('shared', image['visibility'])
+
+        # 20. Known admin, visibility=community, sees all community images
+        images = list_images('admin', role='admin', visibility='community')
+        self.assertEqual(4, len(images))
+        for image in images:
+            self.assertEqual('community', image['visibility'])
 
         self.stop_servers()
 
@@ -3257,7 +3347,7 @@ class TestImageMembers(functional.FunctionalTest):
         self.assertEqual(0, len(images))
 
         owners = ['tenant1', 'tenant2', 'admin']
-        visibilities = ['public', 'private']
+        visibilities = ['public', 'shared']
         image_fixture = []
         for owner in owners:
             for visibility in visibilities:
@@ -3288,7 +3378,7 @@ class TestImageMembers(functional.FunctionalTest):
         images = jsonutils.loads(response.text)['images']
         self.assertEqual(3, len(images))
 
-        # Add Image member for tenant1-private image
+        # Add Image member for tenant1-shared image
         path = self._url('/v2/images/%s/members' % image_fixture[1]['id'])
         body = jsonutils.dumps({'member': TENANT3})
         response = requests.post(path, headers=get_header('tenant1'),
@@ -3337,7 +3427,7 @@ class TestImageMembers(functional.FunctionalTest):
         self.assertEqual(200, response.status_code)
         images = jsonutils.loads(response.text)['images']
         self.assertEqual(1, len(images))
-        self.assertEqual(images[0]['name'], 'tenant1-private')
+        self.assertEqual(images[0]['name'], 'tenant1-shared')
 
         # Image list should contain 0 image for TENANT3 with status rejected
         # and visibility shared
@@ -3363,7 +3453,7 @@ class TestImageMembers(functional.FunctionalTest):
         images = jsonutils.loads(response.text)['images']
         self.assertEqual(0, len(images))
 
-        # Image tenant2-private's image members list should contain no members
+        # Image tenant2-shared's image members list should contain no members
         path = self._url('/v2/images/%s/members' % image_fixture[3]['id'])
         response = requests.get(path, headers=get_header('tenant2'))
         self.assertEqual(200, response.status_code)
@@ -3436,7 +3526,7 @@ class TestImageMembers(functional.FunctionalTest):
         response = requests.put(path, headers=get_header('tenant1'), data=body)
         self.assertEqual(403, response.status_code)
 
-        # Add Image member for tenant2-private image
+        # Add Image member for tenant2-shared image
         path = self._url('/v2/images/%s/members' % image_fixture[3]['id'])
         body = jsonutils.dumps({'member': TENANT4})
         response = requests.post(path, headers=get_header('tenant2'),
@@ -3455,7 +3545,7 @@ class TestImageMembers(functional.FunctionalTest):
                                  data=body)
         self.assertEqual(403, response.status_code)
 
-        # Image tenant1-private's members list should contain 1 member
+        # Image tenant1-shared's members list should contain 1 member
         path = self._url('/v2/images/%s/members' % image_fixture[1]['id'])
         response = requests.get(path, headers=get_header('tenant1'))
         self.assertEqual(200, response.status_code)
@@ -3477,8 +3567,8 @@ class TestImageMembers(functional.FunctionalTest):
         # Image members forbidden for public image
         path = self._url('/v2/images/%s/members' % image_fixture[0]['id'])
         response = requests.get(path, headers=get_header('tenant1'))
-        self.assertIn("Public images do not have members", response.text)
-        self.assertEqual(403, response.status_code)
+        self.assertIn("Only shared images have members", response.text)
+        self.assertEqual(http.FORBIDDEN, response.status_code)
 
         # Image Member Cannot delete Image membership
         path = self._url('/v2/images/%s/members/%s' % (image_fixture[1]['id'],

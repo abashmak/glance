@@ -1617,7 +1617,7 @@ msgstr "Tipo de tarefa fornecido não é suportado: %(type)s"
 msgid "Provides a user friendly description of the namespace."
 msgstr "Fornece uma descrição fácil do namespace."
 
-msgid "Public images do not have members."
+msgid "Only shared images have members."
 msgstr "As imagens não têm membros."
 
 msgid "Received invalid HTTP redirect."

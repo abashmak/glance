@@ -1639,7 +1639,7 @@ msgstr "Il tipo dell'attività fornito non è supportato: %(type)s"
 msgid "Provides a user friendly description of the namespace."
 msgstr "Fornisce una semplice descrizione utente dello spazio dei nomi."
 
-msgid "Public images do not have members."
+msgid "Only shared images have members."
 msgstr "Le immagini pubblica non hanno membri."
 
 msgid "Received invalid HTTP redirect."

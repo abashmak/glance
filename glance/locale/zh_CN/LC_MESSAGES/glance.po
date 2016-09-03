@@ -1554,7 +1554,7 @@ msgstr "不支持任务的所提供类型：%(type)s"
 msgid "Provides a user friendly description of the namespace."
 msgstr "提供名称空间的用户友好描述。"
 
-msgid "Public images do not have members."
+msgid "Only shared images have members."
 msgstr "公共映像没有成员。"
 
 msgid "Received invalid HTTP redirect."

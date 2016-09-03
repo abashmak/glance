@@ -1376,7 +1376,7 @@ msgstr "Sağlanan görev türü desteklenmiyor: %(type)s"
 msgid "Provides a user friendly description of the namespace."
 msgstr "Ad alanı için kullanıcı dostu bir açıklama sağlar."
 
-msgid "Public images do not have members."
+msgid "Only shared images have members."
 msgstr "Ortak imajlar üyelere sahip değil."
 
 msgid "Received invalid HTTP redirect."

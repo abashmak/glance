@@ -1564,7 +1564,7 @@ msgstr "제공된 태스크 유형이 지원되지 않음: %(type)s"
 msgid "Provides a user friendly description of the namespace."
 msgstr "사용자에게 익숙한 네임스페이스 설명을 제공합니다."
 
-msgid "Public images do not have members."
+msgid "Only shared images have members."
 msgstr "공용 이미지에 멤버가 없습니다."
 
 msgid "Received invalid HTTP redirect."

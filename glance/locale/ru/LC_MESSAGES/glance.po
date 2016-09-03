@@ -1592,7 +1592,7 @@ msgstr "Указан неподдерживаемый тип задачи: %(typ
 msgid "Provides a user friendly description of the namespace."
 msgstr "Описание пространства имен для пользователя."
 
-msgid "Public images do not have members."
+msgid "Only shared images have members."
 msgstr "У общедоступных образов нет участников."
 
 msgid "Received invalid HTTP redirect."

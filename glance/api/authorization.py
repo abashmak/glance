@@ -127,8 +127,8 @@ class ImageMemberRepoProxy(glance.domain.proxy.MemberRepo):
         self._check_image_visibility()
 
     def _check_image_visibility(self):
-        if self.image.visibility == 'public':
-            message = _("Public images do not have members.")
+        if self.image.visibility != 'shared':
+            message = _("Only shared images have members.")
             raise exception.Forbidden(message)
 
     def get(self, member_id):
@@ -220,8 +220,8 @@ class ImageMemberFactoryProxy(glance.domain.proxy.ImageMembershipFactory):
                             "for the image.")
                 raise exception.Forbidden(message)
 
-        if image.visibility == 'public':
-            message = _("Public images do not have members.")
+        if image.visibility != 'shared':
+            message = _("Only shared images have members.")
             raise exception.Forbidden(message)
 
         return self.image_member_factory.new_image_member(image, member_id)

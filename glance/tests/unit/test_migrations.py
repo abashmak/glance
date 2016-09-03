@@ -1489,6 +1489,44 @@ class MigrationsMixin(test_migrations.WalkVersionsMixin):
                          metadef_resource_types.name, engine)
                         )
 
+    def _pre_upgrade_045(self, engine):
+        images = db_utils.get_table(engine, 'images')
+
+        now = datetime.datetime.now()
+        public_temp = dict(deleted=False,
+                           created_at=now,
+                           status='active',
+                           is_public=True,
+                           min_disk=0,
+                           min_ram=0,
+                           id='public_id')
+        images.insert().values(public_temp).execute()
+
+        now = datetime.datetime.now()
+        private_temp = dict(deleted=False,
+                            created_at=now,
+                            status='active',
+                            is_public=False,
+                            min_disk=0,
+                            min_ram=0,
+                            id='private_id')
+        images.insert().values(private_temp).execute()
+
+    def _check_045(self, engine, data):
+        images = db_utils.get_table(engine, 'images')
+        self.assertIn('visibility', images.c)
+        self.assertNotIn('is_public', images.c)
+
+        rows = images.select().where(
+            images.c.id == 'public_id').execute().fetchall()
+        self.assertEqual(1, len(rows))
+        self.assertEqual('public', rows[0][16])
+
+        rows = images.select().where(
+            images.c.id == 'private_id').execute().fetchall()
+        self.assertEqual(1, len(rows))
+        self.assertEqual('shared', rows[0][16])
+
     def assert_table(self, engine, table_name, indices, columns):
         table = db_utils.get_table(engine, table_name)
         index_data = [(index.name, index.columns.keys()) for index in

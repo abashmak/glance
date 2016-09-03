@@ -1592,7 +1592,7 @@ msgstr "指定されたタスクタイプはサポートされていません: %
 msgid "Provides a user friendly description of the namespace."
 msgstr "分かりやすい名前空間の説明が提供されます。"
 
-msgid "Public images do not have members."
+msgid "Only shared images have members."
 msgstr "パブリックイメージにはメンバーがありません。"
 
 msgid "Received invalid HTTP redirect."

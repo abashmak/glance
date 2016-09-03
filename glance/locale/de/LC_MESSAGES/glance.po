@@ -1653,7 +1653,7 @@ msgid "Provides a user friendly description of the namespace."
 msgstr ""
 "Stellt eine benutzerfreundliche Beschreibung des Namensbereichs bereit. "
 
-msgid "Public images do not have members."
+msgid "Only shared images have members."
 msgstr "Öffentliche Abbilder haben keine Mitglieder."
 
 msgid "Received invalid HTTP redirect."
