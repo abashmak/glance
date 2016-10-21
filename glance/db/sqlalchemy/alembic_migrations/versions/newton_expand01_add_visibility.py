@@ -43,8 +43,8 @@ def upgrade():
 
     op.add_column('images', Column('visibility',
                                    enum,
-                                   nullable=False,
-                                   server_default='private'))
+                                   nullable=True,
+                                   server_default=None))
     op.create_index('visibility_image_idx',
                     'images',
                     ['visibility'],
