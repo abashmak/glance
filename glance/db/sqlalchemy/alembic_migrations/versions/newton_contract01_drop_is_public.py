@@ -22,7 +22,7 @@ Create Date: 2016-08-04 12:22:01.294934
 """
 
 from alembic import op
-from sqlalchemy import MetaData, Table
+from sqlalchemy import MetaData, Table, Enum
 
 from glance.db import migration
 
@@ -37,15 +37,17 @@ def upgrade():
     meta = MetaData(bind=op.get_bind())
     images = Table('images', meta, autoload=True)
 
-    op.execute(images.update(values={'visibility': 'public'}).where(
-        images.c.is_public))
+    enum = Enum('private', 'public', 'shared', 'community',
+                 metadata=meta, name='image_visibility')
+    enum.create()
 
-    # TODO(abashmak) uncomment below when community images codebase
-    # including updates to tests gets merged, either upstream or in
-    # this 'feature' breanch
-    # with op.batch_alter_table("images") as batch_op:
-    #    batch_op.drop_index('ix_images_is_public')
-    #    batch_op.drop_column('is_public')
+    with op.batch_alter_table("images") as batch_op:
+        batch_op.drop_index('ix_images_is_public')
+        batch_op.drop_column('is_public')
+        batch_op.alter_column(column_name='visibility',
+                              existing_type=enum,
+                              nullable=False,
+                              server_default='shared')
 
 
 def downgrade():
